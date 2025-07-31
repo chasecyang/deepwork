@@ -1,0 +1,50 @@
+name: Build Executables
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            exe_name: deepwork.exe
+            artifact_name: deepwork-windows
+          - os: macos-latest
+            platform: macos
+            exe_name: deepwork
+            artifact_name: deepwork-macos
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies and build
+      shell: bash
+      run: |
+        python -m venv .venv
+        if [ "${{ matrix.platform }}" == "windows" ]; then
+          .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
+        pip install -r requirements.txt
+        python build.py
+        
+    - name: Upload executable
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: release/
+        retention-days: 30
