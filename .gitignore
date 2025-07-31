@@ -1,0 +1,16 @@
+# 忽略Python字节码文件
+__pycache__/
+*.pyc
+*.pyo
+.ve
+
+.venv/
+env/
+venv/
+ENV/
+
+.DS_Store
+
+/build
+/dist
+/release

@@ -1,0 +1,33 @@
+{
+  "pet_name": "桌面助手",
+  "window_x": 1387,
+  "window_y": 805,
+  "window_width": 64,
+  "window_height": 64,
+  "always_on_top": true,
+  "transparency": 1.0,
+  "hot_reload_enabled": true,
+  "hot_reload_delay": 1.0,
+  "vision_model": {
+    "base_url": "http://localhost:11434/v1",
+    "api_key": "",
+    "model_name": "qwen2.5vl:7b"
+  },
+  "language_model": {
+    "base_url": "http://localhost:11434/v1",
+    "api_key": "",
+    "model_name": "qwen2.5:7b"
+  },
+  "theme": "light",
+  "enable_animations": true,
+  "animation_speed": 200,
+  "focus": {
+    "default_duration": 25,
+    "analysis_interval": 10,
+    "screenshot_quality": 0.7,
+    "focus_threshold": 0.7,
+    "enable_notifications": true,
+    "save_screenshots": false,
+    "max_session_history": 10
+  }
+}
