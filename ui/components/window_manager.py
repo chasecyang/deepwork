@@ -2,6 +2,7 @@
 窗口管理器
 负责桌面宠物窗口的基本属性和行为管理
 """
+import sys
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, QPoint
 
@@ -16,15 +17,28 @@ class WindowManager:
     def init_window_properties(self):
         """初始化窗口属性"""
         # 设置窗口标志：无边框、置顶
-        self.widget.setWindowFlags(
+        window_flags = (
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint |
             Qt.WindowType.Window
         )
         
-        # 设置窗口属性
+        # Windows平台需要额外的标志来确保透明效果
+        if sys.platform == "win32":
+            window_flags |= Qt.WindowType.Tool
+        
+        self.widget.setWindowFlags(window_flags)
+        
+        # 设置窗口属性 - 关键：透明背景属性
+        self.widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.widget.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, False)
-        self.widget.setAttribute(Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow, True)
+        
+        # 平台特定属性
+        if sys.platform == "darwin":  # macOS
+            self.widget.setAttribute(Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow, True)
+        elif sys.platform == "win32":  # Windows
+            # Windows特定的透明优化
+            self.widget.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
         
         # 设置窗口标题
         self.widget.setWindowTitle("Deepwork")
@@ -62,11 +76,22 @@ class WindowManager:
             Qt.WindowType.Window
         )
         
+        # Windows平台需要额外的标志
+        if sys.platform == "win32":
+            base_flags |= Qt.WindowType.Tool
+        
         if topmost:
             self.widget.setWindowFlags(base_flags | Qt.WindowType.WindowStaysOnTopHint)
         else:
             self.widget.setWindowFlags(base_flags)
         
-        # 重新设置窗口属性
+        # 重新设置窗口属性 - 关键：透明背景属性
+        self.widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.widget.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, False)
-        self.widget.setAttribute(Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow, True)
+        
+        # 平台特定属性
+        if sys.platform == "darwin":  # macOS
+            self.widget.setAttribute(Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow, True)
+        elif sys.platform == "win32":  # Windows
+            # Windows特定的透明优化
+            self.widget.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
