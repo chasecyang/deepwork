@@ -14,3 +14,7 @@ ENV/
 /build
 /dist
 /release
+
+/presentation
+
+config.json
