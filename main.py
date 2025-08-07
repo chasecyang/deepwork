@@ -13,19 +13,12 @@ from PySide6.QtWidgets import QApplication
 from config.config import Config
 from ui.desktop_pet import DesktopPet
 
+# 导入工具类
+from utils.common import LogUtils
+
 # 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-
-# 设置第三方库的日志级别为WARNING，避免过多调试信息
-logging.getLogger('openai').setLevel(logging.WARNING)
-logging.getLogger('httpcore').setLevel(logging.WARNING)
-logging.getLogger('httpx').setLevel(logging.WARNING)
-logging.getLogger('urllib3').setLevel(logging.WARNING)
-
-logger = logging.getLogger(__name__)
+LogUtils.suppress_third_party_logs()
+logger = LogUtils.setup_logger(__name__)
 
 
 
@@ -36,18 +29,16 @@ def main():
         app = QApplication(sys.argv)
         
         # 设置应用程序信息
-        app.setApplicationName("桌面宠物")
+        app.setApplicationName("Deepwork")
         app.setApplicationVersion("2.0")
-        app.setOrganizationName("DesktopPet")
+        app.setOrganizationName("Deepwork")
         
         # 初始化配置管理器
         config_manager = Config()
         
-        # 桌面宠物启动
-        logger.info("桌面宠物启动中...")
-        
-        # 创建桌宠（AI状态检查将在唤醒状态中进行）
-        pet = DesktopPet(config_manager, initial_ai_status=False)
+        # 创建桌宠
+        logger.info("桌面助手启动中...")
+        pet = DesktopPet(config_manager)
         
         # 输出启动信息
         print("🐾 桌面助手启动完成!")

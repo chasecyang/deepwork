@@ -4,12 +4,93 @@
 """
 import logging
 import os
+import random
+import asyncio
 from PySide6.QtWidgets import QToolTip
-from PySide6.QtCore import QTimer, QRect
+from PySide6.QtCore import QTimer, QRect, QThread, Signal
 from PySide6.QtGui import QCursor
 from .base_state import BaseState
+from utils.ai_client import ai_client
 
 logger = logging.getLogger(__name__)
+
+
+class AIEncourageWorker(QThread):
+    """AI鼓励工作线程"""
+    encourage_complete = Signal(str, str)  # (message, emoji)
+    encourage_failed = Signal()
+    
+    def __init__(self, language_config, prompts):
+        super().__init__()
+        self.language_config = language_config
+        self.prompts = prompts
+    
+    def run(self):
+        """在工作线程中运行异步AI调用"""
+        try:
+            # 创建新的事件循环
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            # 运行异步任务
+            result = loop.run_until_complete(self._call_ai())
+            
+            if result:
+                message, emoji = result
+                self.encourage_complete.emit(message, emoji)
+            else:
+                self.encourage_failed.emit()
+                
+        except Exception as e:
+            logger.error(f"AI鼓励工作线程失败: {e}")
+            self.encourage_failed.emit()
+        finally:
+            loop.close()
+    
+    async def _call_ai(self):
+        """异步调用AI"""
+        try:
+            # 随机选择提示词
+            prompt = random.choice(self.prompts)
+            
+            # 调用AI生成鼓励内容
+            response = await ai_client.call_language_model(self.language_config, prompt)
+            
+            if response:
+                # 清理响应内容
+                clean_response = self._clean_ai_response(response)
+                
+                if clean_response:
+                    # 选择合适的表情
+                    emojis = ["sleeping.gif", "thinking.gif", "confused.gif", "wink.gif"]
+                    emoji = random.choice(emojis)
+                    return clean_response, emoji
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"AI调用失败: {e}")
+            return None
+    
+    def _clean_ai_response(self, response: str) -> str:
+        """清理AI响应内容"""
+        if not response:
+            return ""
+            
+        # 移除多余的空白字符
+        clean = response.strip()
+        
+        # 移除引号
+        if clean.startswith('"') and clean.endswith('"'):
+            clean = clean[1:-1]
+        if clean.startswith("'") and clean.endswith("'"):
+            clean = clean[1:-1]
+            
+        # 限制长度（最多60个字符，待机状态可以稍长一些）
+        if len(clean) > 60:
+            clean = clean[:57] + "..."
+            
+        return clean
 
 
 class StandbyState(BaseState):
@@ -29,11 +110,36 @@ class StandbyState(BaseState):
         self.hint_timer.timeout.connect(self._show_periodic_hint)
         self.hint_timer.setSingleShot(True)
         
+        # AI鼓励定时器
+        self.ai_encourage_timer = QTimer()
+        self.ai_encourage_timer.setSingleShot(True)
+        self.ai_encourage_timer.timeout.connect(self._trigger_ai_encourage)
+        
+        # AI工作线程
+        self.ai_encourage_worker = None
+        
         # 睡眠表情列表
         self.standby_emojis = [
             "sleeping.gif",
             "confused.gif", 
             "thinking.gif"
+        ]
+        
+        # 鼓励性质的AI提示词模板
+        self.ai_encourage_prompts = [
+            "作为一个休眠中的桌面助手，温柔地提醒用户配置AI功能来唤醒你（不超过20个字）",
+            "你是一个等待配置的AI宠物，可爱地表达期待被唤醒的心情（不超过20个字）",
+            "作为待机的小助手，友善地鼓励用户完成配置享受AI功能（不超过20个字）",
+            "你正在休眠等待，简短温馨地说明配置AI后可以做什么（不超过20个字）"
+        ]
+        
+        # 预设的鼓励话语
+        self.encourage_messages = [
+            ("😴 配置AI后我就能陪你聊天啦~", "sleeping.gif"),
+            ("💤 设置一下AI模型，让我苏醒吧", "confused.gif"),
+            ("🤔 好想和你对话呢，快配置AI吧", "thinking.gif"),
+            ("😊 右键设置AI，解锁更多功能哦", "smile.gif"),
+            ("💡 配置完成后我会变得更智能~", "wink.gif"),
         ]
         
     def enter(self) -> None:
@@ -54,7 +160,6 @@ class StandbyState(BaseState):
         self._animate_to_opacity(standby_opacity)
         
         # 延迟显示配置提示，等动画完成
-        from PySide6.QtCore import QTimer
         hint_delay_timer = QTimer()
         hint_delay_timer.setSingleShot(True)
         hint_delay_timer.timeout.connect(self._show_config_hint)
@@ -62,6 +167,9 @@ class StandbyState(BaseState):
         
         # 设置定期提示（30秒后再次提示）
         self.hint_timer.start(30000)  # 30秒
+        
+        # 启动AI鼓励定时器
+        self._schedule_next_ai_encourage()
         
         logger.info("待机模式激活完成")
     
@@ -87,6 +195,10 @@ class StandbyState(BaseState):
         
         # 停止提示定时器
         self.hint_timer.stop()
+        
+        # 停止AI鼓励定时器
+        if hasattr(self, 'ai_encourage_timer') and self.ai_encourage_timer.isActive():
+            self.ai_encourage_timer.stop()
         
         # 隐藏可能显示的工具提示
         QToolTip.hideText()
@@ -241,3 +353,74 @@ class StandbyState(BaseState):
                     
         except Exception as e:
             logger.error(f"切换到AI自动检测标签页失败: {e}")
+    
+    def _schedule_next_ai_encourage(self):
+        """安排下一次AI鼓励"""
+        if not self.desktop_pet.config.get("enable_ai_encourage_in_standby", True):
+            return
+            
+        # 待机状态下的鼓励间隔更长，默认10-20分钟
+        min_interval = self.desktop_pet.config.get("ai_encourage_min_interval", 600)  # 10分钟
+        max_interval = self.desktop_pet.config.get("ai_encourage_max_interval", 1200)  # 20分钟
+        
+        interval = random.randint(min_interval, max_interval) * 1000  # 转换为毫秒
+        
+        if hasattr(self, 'ai_encourage_timer') and self.is_active:
+            self.ai_encourage_timer.start(interval)
+            logger.debug(f"安排下次AI鼓励，间隔: {interval/1000:.1f}秒")
+    
+    def _trigger_ai_encourage(self):
+        """触发AI鼓励"""
+        if not self.is_active:
+            return
+            
+        logger.info("触发AI鼓励")
+        
+        # 检查是否有工作线程正在运行
+        if self.ai_encourage_worker and self.ai_encourage_worker.isRunning():
+            logger.debug("AI鼓励工作线程正在运行，跳过本次鼓励")
+            self._schedule_next_ai_encourage()
+            return
+        
+        # 检查是否有配置的语言模型，如果有就尝试AI生成，否则使用预设
+        language_config = self.desktop_pet.config.get("language_model", {})
+        
+        if self._is_language_model_configured(language_config):
+            # 启动AI工作线程
+            self.ai_encourage_worker = AIEncourageWorker(language_config, self.ai_encourage_prompts)
+            self.ai_encourage_worker.encourage_complete.connect(self._on_ai_encourage_complete)
+            self.ai_encourage_worker.encourage_failed.connect(self._on_ai_encourage_failed)
+            self.ai_encourage_worker.start()
+        else:
+            # 使用预设鼓励话语
+            self._show_preset_encourage()
+        
+        # 安排下一次鼓励
+        self._schedule_next_ai_encourage()
+    
+    def _on_ai_encourage_complete(self, message: str, emoji: str):
+        """AI鼓励完成回调"""
+        if hasattr(self.desktop_pet, 'ai_state_manager'):
+            self.desktop_pet.ai_state_manager.show_speech_bubble(message, emoji, 5000)
+            logger.info(f"AI鼓励: {message}")
+    
+    def _on_ai_encourage_failed(self):
+        """AI鼓励失败回调"""
+        logger.debug("AI鼓励调用失败，使用预设鼓励")
+        self._show_preset_encourage()
+    
+    def _show_preset_encourage(self):
+        """显示预设鼓励话语"""
+        message, emoji = random.choice(self.encourage_messages)
+        if hasattr(self.desktop_pet, 'ai_state_manager'):
+            self.desktop_pet.ai_state_manager.show_speech_bubble(message, emoji, 4000)
+            logger.info(f"预设鼓励: {message}")
+    
+    def _is_language_model_configured(self, config: dict) -> bool:
+        """检查语言模型是否已配置"""
+        return (
+            config.get("base_url") and 
+            config.get("model_name") and
+            config.get("base_url").strip() != "" and
+            config.get("model_name").strip() != ""
+        )

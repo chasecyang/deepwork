@@ -211,70 +211,22 @@ class AIStateManager(QObject):
             return self.current_state.get_tooltip_text()
         return None
     
-    def get_context_menu_items(self) -> list:
-        """
-        获取当前状态的右键菜单项
-        
-        Returns:
-            list: 菜单项列表
-        """
-        if self.current_state:
-            return self.current_state.get_context_menu_items()
-        return []
+
     
     def on_config_changed(self) -> None:
-        """
-        配置变化时的回调
-        记录当前状态和配置变化信息
-        """
+        """配置变化时的回调"""
         current_state = self.get_current_state_name()
-        logger.info(f"配置已更改，状态管理器收到通知 (当前状态: {current_state})")
-        
-        # 记录状态管理器状态，便于调试
-        logger.info(f"📊 状态管理器状态: {self}")
-        
-        # 注意：实际的状态切换由桌面宠物的on_settings_changed方法处理
-        # 这里主要用于日志记录和状态监控
+        logger.info(f"配置已更改，当前状态: {current_state}")
     
-    def add_state(self, state_type: AIStateType, state: BaseState) -> None:
-        """
-        动态添加状态（用于扩展）
-        
-        Args:
-            state_type: 状态类型
-            state: 状态实例
-        """
-        self.states[state_type] = state
-        logger.info(f"添加新状态: {state_type.value} -> {state}")
-    
-    def remove_state(self, state_type: AIStateType) -> bool:
-        """
-        移除状态（用于动态管理）
-        
-        Args:
-            state_type: 要移除的状态类型
-            
-        Returns:
-            bool: 是否移除成功
-        """
-        if state_type in self.states:
-            # 如果当前正处于要移除的状态，切换到正常状态
-            if self.current_state == self.states[state_type]:
-                self.switch_to_normal()
-            
-            del self.states[state_type]
-            logger.info(f"移除状态: {state_type.value}")
-            return True
-        
-        return False
+    def reload_states(self) -> None:
+        """重新加载状态（用于调试）"""
+        current_state_type = self.get_current_state_type()
+        self._register_states()
+        if current_state_type and current_state_type in self.states:
+            self.switch_to_state(current_state_type)
     
     def _handle_speech_bubble_on_enter(self, state):
-        """
-        处理状态进入时的对话气泡显示
-        
-        Args:
-            state: 刚进入的状态实例
-        """
+        """处理状态进入时的对话气泡显示"""
         if not state.should_show_speech_on_enter():
             return
             
@@ -283,17 +235,9 @@ class AIStateManager(QObject):
         
         if speech_text and hasattr(self.desktop_pet, 'show_speech_bubble'):
             self.desktop_pet.show_speech_bubble(speech_text, speech_emoji)
-            logger.debug(f"显示状态对话: {speech_text}")
     
     def show_speech_bubble(self, text: str, emoji: str = None, duration: int = 3000):
-        """
-        显示对话气泡（供状态调用）
-        
-        Args:
-            text: 对话文本
-            emoji: 配套表情（可选）
-            duration: 显示时长（毫秒）
-        """
+        """显示对话气泡（供状态调用）"""
         if hasattr(self.desktop_pet, 'show_speech_bubble'):
             self.desktop_pet.show_speech_bubble(text, emoji, duration)
     

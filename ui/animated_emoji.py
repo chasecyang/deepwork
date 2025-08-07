@@ -18,7 +18,8 @@ class AnimatedEmojiLabel(QLabel):
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # 动画表情资源路径
-        self.emoji_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'animated_emojis')
+        from utils.common import PathUtils
+        self.emoji_dir = PathUtils.get_assets_dir() / 'animated_emojis'
         
     def set_animated_emoji(self, emoji_name):
         """
@@ -29,17 +30,17 @@ class AnimatedEmojiLabel(QLabel):
         """
         # 处理文件名，确保有.gif扩展名
         if not emoji_name.endswith('.gif'):
-            gif_path = os.path.join(self.emoji_dir, f"{emoji_name}.gif")
+            gif_path = self.emoji_dir / f"{emoji_name}.gif"
         else:
-            gif_path = os.path.join(self.emoji_dir, emoji_name)
+            gif_path = self.emoji_dir / emoji_name
         
-        if os.path.exists(gif_path):
+        if gif_path.exists():
             # 停止之前的动画
             if self._movie:
                 self._movie.stop()
                 
             # 创建新的动画
-            self._movie = QMovie(gif_path)
+            self._movie = QMovie(str(gif_path))
             # 使用固定的小尺寸，而不是 self.size()
             from PySide6.QtCore import QSize
             self._movie.setScaledSize(QSize(64, 64))  # 64x64 像素，比窗口稍小
