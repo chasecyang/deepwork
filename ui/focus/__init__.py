@@ -5,5 +5,6 @@
 
 from .focus_config_dialog import FocusConfigDialog
 from .focus_report_dialog import FocusReportDialog
+from .focus_history_dialog import FocusHistoryDialog
 
-__all__ = ['FocusConfigDialog', 'FocusReportDialog']
+__all__ = ['FocusConfigDialog', 'FocusReportDialog', 'FocusHistoryDialog']

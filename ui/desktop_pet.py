@@ -42,11 +42,13 @@ class DesktopPet(QWidget):
         self.menu_manager = MenuManager(
             self,
             on_settings_clicked=self._open_settings,
-            on_quit_clicked=None  # 使用默认退出行为
+            on_quit_clicked=None,  # 使用默认退出行为
+            on_focus_history_clicked=self._open_focus_history
         )
         
         # 设置对话框（延迟初始化）
         self.settings_dialog = None
+        self.focus_history_dialog = None
         
     def _init_ui(self):
         """初始化用户界面"""
@@ -140,6 +142,22 @@ class DesktopPet(QWidget):
         self.settings_dialog.show()
         self.settings_dialog.raise_()
         self.settings_dialog.activateWindow()
+    
+    def _open_focus_history(self):
+        """打开专注历史对话框"""
+        try:
+            from .focus import FocusHistoryDialog
+            
+            if not self.focus_history_dialog:
+                self.focus_history_dialog = FocusHistoryDialog(self)
+            
+            self.focus_history_dialog.show()
+            self.focus_history_dialog.raise_()
+            self.focus_history_dialog.activateWindow()
+            
+        except Exception as e:
+            logger.error(f"打开专注历史对话框失败: {e}")
+            self.show_speech_bubble("打开专注历史失败", "confused.gif", 2000)
         
     def _on_settings_changed(self):
         """设置更改后的回调"""

@@ -1,13 +1,10 @@
 {
-  "pet_name": "桌面助手",
-  "window_x": 1075,
-  "window_y": 518,
+  "window_x": 951,
+  "window_y": 57,
   "window_width": 64,
   "window_height": 64,
-  "always_on_top": true,
   "transparency": 1.0,
-  "hot_reload_enabled": true,
-  "hot_reload_delay": 1.0,
+  "always_on_top": true,
   "vision_model": {
     "base_url": "http://localhost:11434/v1",
     "api_key": "",
@@ -18,9 +15,9 @@
     "api_key": "",
     "model_name": "qwen2.5:7b"
   },
-  "theme": "light",
   "enable_animations": true,
   "animation_speed": 200,
+  "theme": "light",
   "focus": {
     "default_duration": 25,
     "analysis_interval": 10,
@@ -29,5 +26,14 @@
     "enable_notifications": true,
     "save_screenshots": false,
     "max_session_history": 10
-  }
+  },
+  "pet_name": "桌面助手",
+  "enable_ai_random_chat": true,
+  "ai_random_chat_min_interval": 10,
+  "ai_random_chat_max_interval": 30,
+  "enable_ai_encourage_in_standby": true,
+  "ai_encourage_min_interval": 600,
+  "ai_encourage_max_interval": 1200,
+  "hot_reload_enabled": true,
+  "hot_reload_delay": 1.0
 }

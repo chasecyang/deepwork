@@ -250,8 +250,8 @@ class FocusState(BaseState):
     def _on_analysis_completed(self, result):
         """处理分析完成"""
         try:
-            # 添加到会话
-            self.current_session.add_analysis_result(result)
+            # 使用会话管理器添加分析结果（自动保存到数据库）
+            self.session_manager.add_analysis_result(result)
             self.last_analysis_result = result
             
             # 更新表情和反馈

@@ -123,6 +123,7 @@ class FocusSessionManager:
     def __init__(self):
         self.current_session: Optional[FocusSession] = None
         self.session_history: List[FocusSession] = []
+        self.current_session_id: Optional[int] = None  # 数据库中的会话ID
     
     def start_session(self, goal: str, duration_minutes: int) -> FocusSession:
         """开始新的专注会话"""
@@ -135,6 +136,17 @@ class FocusSessionManager:
             start_time=time.time()
         )
         
+        # 保存到数据库
+        try:
+            from .focus_storage import get_focus_storage
+            storage = get_focus_storage()
+            self.current_session_id = storage.save_session(self.current_session)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"保存会话到数据库失败: {e}")
+            self.current_session_id = None
+        
         return self.current_session
     
     def end_current_session(self):
@@ -142,17 +154,32 @@ class FocusSessionManager:
         if self.current_session:
             self.current_session.complete()
             self.session_history.append(self.current_session)
+            
+            # 更新数据库
+            if self.current_session_id:
+                try:
+                    from .focus_storage import get_focus_storage
+                    storage = get_focus_storage()
+                    storage.update_session(self.current_session_id, self.current_session)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"更新会话到数据库失败: {e}")
+            
             self.current_session = None
+            self.current_session_id = None
     
     def pause_current_session(self):
         """暂停当前会话"""
         if self.current_session:
             self.current_session.pause()
+            self._update_session_in_db()
     
     def resume_current_session(self):
         """恢复当前会话"""
         if self.current_session:
             self.current_session.resume()
+            self._update_session_in_db()
     
     def get_current_session(self) -> Optional[FocusSession]:
         """获取当前会话"""
@@ -161,3 +188,34 @@ class FocusSessionManager:
     def is_session_active(self) -> bool:
         """是否有活跃的会话"""
         return self.current_session is not None and self.current_session.is_active
+    
+    def add_analysis_result(self, result):
+        """添加分析结果到当前会话"""
+        if self.current_session:
+            self.current_session.add_analysis_result(result)
+            
+            # 保存到数据库
+            if self.current_session_id:
+                try:
+                    from .focus_storage import get_focus_storage
+                    storage = get_focus_storage()
+                    storage.save_analysis_result(self.current_session_id, result)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"保存分析结果到数据库失败: {e}")
+            
+            # 更新会话统计
+            self._update_session_in_db()
+    
+    def _update_session_in_db(self):
+        """更新会话到数据库"""
+        if self.current_session and self.current_session_id:
+            try:
+                from .focus_storage import get_focus_storage
+                storage = get_focus_storage()
+                storage.update_session(self.current_session_id, self.current_session)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"更新会话到数据库失败: {e}")
