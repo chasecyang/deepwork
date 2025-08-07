@@ -212,8 +212,41 @@ class NormalState(BaseState):
     
     def on_right_click(self) -> None:
         """处理右键点击事件"""
-        # 显示完整的右键菜单
-        super().on_right_click()
+        # 创建动态右键菜单
+        from PySide6.QtWidgets import QMenu
+        from PySide6.QtGui import QAction, QCursor
+        from ..theme import ModernTheme
+        
+        menu = QMenu(self.desktop_pet)
+        menu.setStyleSheet(ModernTheme.get_menu_style())
+        
+        # 添加开始专注功能
+        focus_action = QAction("🎯 开始专注", self.desktop_pet)
+        focus_action.triggered.connect(self._start_focus)
+        menu.addAction(focus_action)
+        
+        menu.addSeparator()
+        
+        # 添加专注历史
+        focus_history_action = QAction("📈 专注历史", self.desktop_pet)
+        focus_history_action.triggered.connect(self.desktop_pet._open_focus_history)
+        menu.addAction(focus_history_action)
+        
+        menu.addSeparator()
+        
+        # 添加设置
+        settings_action = QAction("设置", self.desktop_pet)
+        settings_action.triggered.connect(self.desktop_pet._open_settings)
+        menu.addAction(settings_action)
+        
+        menu.addSeparator()
+        
+        # 添加退出
+        quit_action = QAction("退出", self.desktop_pet)
+        quit_action.triggered.connect(self._quit_app)
+        menu.addAction(quit_action)
+        
+        menu.exec(QCursor.pos())
     
     def get_tooltip_text(self) -> str:
         """获取工具提示文本"""
@@ -318,3 +351,20 @@ class NormalState(BaseState):
             config.get("base_url").strip() != "" and
             config.get("model_name").strip() != ""
         )
+    
+    def _start_focus(self):
+        """开始专注功能"""
+        logger.info("用户选择开始专注")
+        if hasattr(self.desktop_pet, 'ai_state_manager'):
+            # 切换到专注状态
+            success = self.desktop_pet.ai_state_manager.switch_to_focus()
+            if success:
+                logger.info("成功切换到专注状态")
+            else:
+                logger.error("切换到专注状态失败")
+                self.desktop_pet.show_speech_bubble("切换到专注模式失败", "confused.gif", 2000)
+    
+    def _quit_app(self):
+        """退出应用"""
+        from PySide6.QtWidgets import QApplication
+        QApplication.quit()
