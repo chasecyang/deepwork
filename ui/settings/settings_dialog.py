@@ -35,8 +35,9 @@ class SettingsDialog(BaseSettingsDialog):
         self.basic_tab = BasicSettingsTab()
         tab_widget.addTab(self.basic_tab, "基本设置")
         
+        # AI配置主标签页（包含自动检测和手动配置子标签页）
         self.ai_tab = AISettingsTab()
-        tab_widget.addTab(self.ai_tab, "AI模型")
+        tab_widget.addTab(self.ai_tab, "🤖 AI配置")
         
         self.appearance_tab = AppearanceSettingsTab()
         tab_widget.addTab(self.appearance_tab, "外观")
@@ -67,6 +68,9 @@ class SettingsDialog(BaseSettingsDialog):
         # 连接信号
         self.ok_button.clicked.connect(self.save_settings)
         self.cancel_button.clicked.connect(self.reject)
+        
+        # 存储tab widget以便切换
+        self.tab_widget = tab_widget
     
     def connect_signals(self):
         """连接各种信号"""
@@ -102,3 +106,8 @@ class SettingsDialog(BaseSettingsDialog):
             self.on_settings_changed()
             
         self.accept()
+    
+    def apply_auto_config(self, config):
+        """应用自动检测的配置"""
+        # 将配置应用到AI主tab
+        self.ai_tab.apply_auto_config(config)

@@ -213,7 +213,7 @@ class StandbyState(BaseState):
                 from PySide6.QtCore import QTimer
                 switch_timer = QTimer()
                 switch_timer.setSingleShot(True)
-                switch_timer.timeout.connect(self._switch_to_ai_tab)
+                switch_timer.timeout.connect(self._switch_to_ai_auto_tab)
                 switch_timer.start(200)  # 延迟200ms
                 
             else:
@@ -222,17 +222,22 @@ class StandbyState(BaseState):
         except Exception as e:
             logger.error(f"弹出AI配置对话框失败: {e}")
     
-    def _switch_to_ai_tab(self):
-        """切换到AI配置标签页"""
+    def _switch_to_ai_auto_tab(self):
+        """切换到AI自动检测标签页"""
         try:
             if hasattr(self.desktop_pet, 'settings_dialog') and self.desktop_pet.settings_dialog:
-                # 获取标签页组件并切换到AI标签页
+                # 获取主标签页组件并切换到AI配置标签页
                 from PySide6.QtWidgets import QTabWidget
-                tab_widget = self.desktop_pet.settings_dialog.findChild(QTabWidget)
-                if tab_widget:
-                    # AI标签页通常是第二个标签页（索引1）
-                    tab_widget.setCurrentIndex(1)
-                    logger.info("已切换到AI配置标签页")
+                main_tab_widget = self.desktop_pet.settings_dialog.findChild(QTabWidget)
+                if main_tab_widget:
+                    # AI配置是第二个标签页（索引1）
+                    main_tab_widget.setCurrentIndex(1)
+                    
+                    # 获取AI配置tab并切换到自动检测子tab
+                    ai_tab = self.desktop_pet.settings_dialog.ai_tab
+                    if ai_tab and hasattr(ai_tab, 'switch_to_auto_detection'):
+                        ai_tab.switch_to_auto_detection()
+                        logger.info("已切换到AI自动检测标签页")
                     
         except Exception as e:
-            logger.error(f"切换到AI标签页失败: {e}")
+            logger.error(f"切换到AI自动检测标签页失败: {e}")
